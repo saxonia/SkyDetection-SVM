@@ -14,10 +14,10 @@ my_svm: !!opencv-ml-svm
       data: [ -1, 1 ]
    sv_total: 1
    support_vectors:
-      - [ -1.25786159e-002 ]
+      - [ -1.68067235e-002 ]
    decision_functions:
       -
          sv_count: 1
-         rho: -2.0867924528301409e+000
+         rho: -1.6974789915966080e+000
          alpha: [ 1. ]
          index: [ 0 ]
