@@ -23,6 +23,8 @@ void CallBackFunc(int event,int x,int y,int flags,void *userdata)
 		Mat m = *(Mat*)userdata;
 		//cout << "Intensity = " << (int) m.at<uchar>(y,x) << endl;
 		cout << "Hue = " << (int) m.at<Vec3b>(y,x)[0] << endl;
+		cout << "Saturate = " << (int) m.at<Vec3b>(y,x)[1] << endl;
+		cout << "Value = " << (int) m.at<Vec3b>(y,x)[2] << endl;
 	}
 }
 
@@ -30,7 +32,7 @@ int main()
 {
 	//New 
 	int imgArea = dataWidth*dataHeight;
-	Mat trainingMat(imgArea*numFiles,1,CV_32FC1);
+	Mat trainingMat(imgArea*numFiles,2,CV_32FC1);
 	Mat labelsMat(imgArea*numFiles,1,CV_32FC1);
 
 	int ii = 0; // Current row in trainingMat
@@ -51,8 +53,8 @@ int main()
 
 		for (int i = 0; i<inputImg.rows; i++) {
 			for (int j = 0; j < inputImg.cols; j++) {
-				trainingMat.at<float>(ii++,0) = inputHSV.at<Vec3b>(i,j)[0];
-				//trainingMat.at<float>(ii++,k) = inputHSV.at<Vec3b>(i,j)[1];
+				trainingMat.at<float>(ii,0) = inputHSV.at<Vec3b>(i,j)[0];
+				trainingMat.at<float>(ii++,1) = inputHSV.at<Vec3b>(i,j)[1];
 				//trainingMat.at<float>(ii++,k) = inputHSV.at<Vec3b>(i,j)[2];
 			}
 		}
@@ -61,7 +63,9 @@ int main()
 		{
 			bool clause1 = inputHSV.at<Vec3b>(i/inputImg.cols,i%inputImg.cols)[0] >= 75;
 			bool clause2 = inputHSV.at<Vec3b>(i/inputImg.cols,i%inputImg.cols)[0] <= 120;
-			if(clause1 && clause2)
+			bool clause3 = inputHSV.at<Vec3b>(i/inputImg.cols,i%inputImg.cols)[1] >= 20;
+			bool clause4 = inputHSV.at<Vec3b>(i/inputImg.cols,i%inputImg.cols)[1] <= 252;
+			if(clause1 && clause2 )
 				labelsMat.at<float>(jj++,0) = 1.0;
 			else
 				labelsMat.at<float>(jj++,0) = -1.0;
@@ -85,10 +89,10 @@ int main()
 	CvSVM svm;
 	svm.train(trainingMat, labelsMat, Mat(), Mat(), params);
 
-	svm.save("fin");
+	//svm.save("fin");
 	svm.load("fin");
 
-	Mat testImage = imread("SVMTest/3.png");
+	Mat testImage = imread("SVMDataset/3.png");
 	resize(testImage,testImage,Size(dataWidth,dataHeight));
 	Mat testImageHSV;
 	cvtColor(testImage,testImageHSV,CV_BGR2HSV);
@@ -100,7 +104,7 @@ int main()
 		{
 			//Mat sampleMat = (Mat_<float>(1,1) << 1);
 
-			Mat sampleMat = (Mat_<float>(1,1) << testImageHSV.at<Vec3b>(i,j)[0]);
+			Mat sampleMat = (Mat_<float>(1,2) << testImageHSV.at<Vec3b>(i,j)[0],testImageHSV.at<Vec3b>(i,j)[1]);
 			float response = svm.predict(sampleMat);
 
 			if (response == 1)
@@ -109,26 +113,8 @@ int main()
 				res.at<Vec3b>(i,j)  = green;
 		}
 
-	/*Mat testMat(1,imgArea,CV_32FC1); 
-	ii = 0;
-	for(int i = 0;i < testImage.rows;i++)
-	{
-		for (int j = 0; j < testImage.cols; j++)
-		{
-			testMat.at<float>(0,ii++) = testImage.at<Vec3b>(i,j)[0];
-		}
-	}
-
-	for(int i = 0;i < testImage.rows;i++)
-	{
-		for (int j = 0; j < testImage.cols; j++)
-		{
-			Mat sampleMat = (Mat_<float>(1,1) << testImage.at<uchar>(i,j));
-			float response = svm.predict(testMat);
-		}
-	}*/
 	imshow("testImage",testImage);
-	//setMouseCallback("testImage",CallBackFunc,&testImageHSV);
+	setMouseCallback("testImage",CallBackFunc,&testImageHSV);
 	imshow("res",res);
 	/*Mat grey = imread("SVMDataset/5.png");
 	resize(grey,grey,Size(dataWidth,dataHeight));
