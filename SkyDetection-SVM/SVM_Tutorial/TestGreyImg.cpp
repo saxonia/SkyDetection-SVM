@@ -1,7 +1,8 @@
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+//#include "opencv2/imgcodecs.hpp"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/ml/ml.hpp>
-#include <opencv2\imgproc\imgproc.hpp>
 
 using namespace std;
 using namespace cv;
@@ -46,55 +47,56 @@ int main()
 	}
 
 	//float labels[1] = {1.0};
-	Mat labelsMat(img_area,1,CV_32FC1);
+	Mat labelsMat(img_area,1,CV_32SC1);
 	for(int i = 0;i < img_area;i++)
 	{
 		if(i < img_area/2)
-			labelsMat.at<float>(i,0) = 1.0;
+			labelsMat.at<int>(i,0) = 1.0;
 		else
-			labelsMat.at<float>(i,0) = -1.0;
+			labelsMat.at<int>(i,0) = -1.0;
 	}
 
 	cout << training_mat.size() << endl;
 	cout << labelsMat.size() << endl;
 
-	// Set up SVM's parameters
-	CvSVMParams params;
-	params.svm_type    = CvSVM::C_SVC;
-	params.kernel_type = CvSVM::LINEAR;
-	params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+	//Set up SVM
+	Ptr<ml::SVM> svm = ml::SVM::create();
+	svm->setType(ml::SVM::C_SVC);
+	svm->setKernel(ml::SVM::LINEAR);
+	svm->setTermCriteria(cv::TermCriteria(CV_TERMCRIT_ITER,100,1e-6));
+
+	svm->train(training_mat,ml::ROW_SAMPLE,labelsMat);
 	
+	svm->save("fin");
+	
+	svm = Algorithm::load<ml::SVM>("fin");
 
-	CvSVM svm;
-	svm.train(training_mat, labelsMat, Mat(), Mat(), params);
-
-	svm.save("fin");
-	svm.load("fin");
-
-	Mat image = imread("1.png",0);
+	Mat image = imread("SVMDataTest/1.png",0);
 	resize(image,image,Size(600,350));
 	Mat res = Mat::zeros(Size(image.cols,image.rows),CV_8UC3);
 	Vec3b green(0,255,0), blue (255,0,0);
 
 	for (int i = 0; i < image.rows; ++i)
+	{
         for (int j = 0; j < image.cols; ++j)
         {
             //Mat sampleMat = (Mat_<float>(1,1) << 1);
 			
 			Mat sampleMat = (Mat_<float>(1,1) << image.at<uchar>(i,j));
-            float response = svm.predict(sampleMat);
+			float response = svm->predict(sampleMat);
 
             if (response == 1)
                 res.at<Vec3b>(i,j)  = green;
             else if (response == -1)
                  res.at<Vec3b>(i,j)  = blue;
         }
+	}
 
-
+	imshow("image",image);
 	imshow("res",res);
-	Mat grey = imread("SVMDataset/1.png",0);
-	imshow("grey",grey);
-	setMouseCallback("grey",CallBackFunc,&grey);
+	//Mat grey = imread("SVMDataset/1.png",0);
+	//imshow("grey",grey);
+	//setMouseCallback("grey",CallBackFunc,&grey);
 	waitKey(0);
 
 }
